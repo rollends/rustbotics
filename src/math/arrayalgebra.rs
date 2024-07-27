@@ -44,7 +44,9 @@ impl<const N: usize> Neg for ArrayVector<N> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
-        ArrayVector { data: self.data.map(|a| -a) }
+        ArrayVector {
+            data: self.data.map(|a| -a),
+        }
     }
 }
 
