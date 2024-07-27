@@ -34,6 +34,8 @@ impl<const N: usize> Add<Self> for ArrayVector<N> {
             new_data[n] = new_data[n] + rhs.data[n];
         }
 
+        // I'd prefer to do this functionally, but we cannot collect into an
+        // array...so life is what it is.
         ArrayVector { data: new_data }
     }
 }
@@ -42,13 +44,7 @@ impl<const N: usize> Neg for ArrayVector<N> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
-        let mut data = self.data;
-
-        for n in 0..N {
-            data[n] = -data[n]
-        }
-
-        ArrayVector { data: data }
+        ArrayVector { data: self.data.map(|a| -a) }
     }
 }
 
