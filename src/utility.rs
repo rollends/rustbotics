@@ -27,5 +27,5 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-pub mod math;
-pub mod utility;
+pub mod idregistry;
+mod test_idregistry;
