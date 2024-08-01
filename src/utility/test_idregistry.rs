@@ -34,20 +34,26 @@ mod tests {
 
     #[test]
     fn idregistry_make() {
-        let _ = make_explicit_id_registry(10);
+        let _ = ExplicitIntegralIdentifierRegistry::new(10);
     }
+
+    #[test]
+    fn idregistry_null_registry() {
+        let _ = ExplicitIntegralIdentifierRegistry::null_registry();
+    }
+
 
     #[test]
     #[should_panic(
         expected = "Explicit Integral Identifier Registry expects a positive initial size."
     )]
     fn idregistry_bad_make() {
-        let _ = make_explicit_id_registry(0);
+        let _ = ExplicitIntegralIdentifierRegistry::new(0);
     }
 
     #[test]
     fn idregistry_acquire_id() {
-        let mut registry = make_explicit_id_registry(2);
+        let mut registry = ExplicitIntegralIdentifierRegistry::new(2);
         let mut id1 = 1337;
         let mut id2 = 1337;
         assert_eq!(id1, 1337);
@@ -64,7 +70,7 @@ mod tests {
 
     #[test]
     fn idregistry_acquire_id_resize() {
-        let mut registry = make_explicit_id_registry(2);
+        let mut registry = ExplicitIntegralIdentifierRegistry::new(2);
         let mut id1 = 1337;
         let mut id2 = 1337;
         assert_eq!(id1, 1337);
@@ -85,7 +91,7 @@ mod tests {
 
     #[test]
     fn idregistry_improper_release() {
-        let mut registry = make_explicit_id_registry(2);
+        let mut registry = ExplicitIntegralIdentifierRegistry::new(2);
         let mut id1 = 1337;
         let old_id = id1;
         let id2 = 1337;
@@ -101,7 +107,7 @@ mod tests {
 
     #[test]
     fn idregistry_double_release() {
-        let mut registry = make_explicit_id_registry(2);
+        let mut registry = ExplicitIntegralIdentifierRegistry::new(2);
         let id1;
         id1 = registry
             .acquire_id()

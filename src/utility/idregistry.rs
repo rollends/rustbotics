@@ -61,6 +61,9 @@ pub enum IdentifierRegistryFailure {
 pub trait IdentifierRegistry<Identifier: Clone + Eq>: Clone {
     type Identifier;
 
+    /// Builds an empty registry.
+    fn null_registry() -> Self;
+
     /// Retrieves a currently unused identifier, removing it from the registry,
     /// or fails. Failure can occur only if the registry runs out of
     /// unique identifiers.
@@ -80,11 +83,20 @@ pub struct ExplicitIntegralIdentifierRegistry {
     all_ids: HashSet<usize>,
     free_ids: HashSet<usize>,
     free_id_alloc_chain: LinkedList<usize>,
-    max_used_id: usize,
+    min_unallocated_id: usize,
 }
 
 impl IdentifierRegistry<usize> for ExplicitIntegralIdentifierRegistry {
     type Identifier = usize;
+
+    fn null_registry() -> Self {
+        ExplicitIntegralIdentifierRegistry {
+            all_ids: HashSet::new(),
+            free_ids: HashSet::new(),
+            free_id_alloc_chain: LinkedList::new(),
+            min_unallocated_id: 0,
+        }
+    }
 
     fn acquire_id(&mut self) -> Result<Self::Identifier, IdentifierRegistryFailure> {
         let free_id_alloc_chain = self.free_id_alloc_chain.borrow_mut();
@@ -98,25 +110,24 @@ impl IdentifierRegistry<usize> for ExplicitIntegralIdentifierRegistry {
             None => {
                 // must increase size of registry
                 let all_ids = self.all_ids.borrow_mut();
-                let max_id = self.max_used_id;
+                let min_unallocated_id = self.min_unallocated_id;
 
-                let old_max = max_id;
-                let new_max = old_max + min(usize::MAX - old_max, old_max);
+                let old_min_unallocated_id = min_unallocated_id;
+                let new_min_unallocated_id = min_unallocated_id + min(usize::MAX - min_unallocated_id, min_unallocated_id + 1) - 1;
 
-                if old_max == new_max {
+                if old_min_unallocated_id == new_min_unallocated_id {
                     return Err(IdentifierRegistryFailure::OutOfIdentifiers);
                 }
 
-                self.max_used_id = new_max;
+                self.min_unallocated_id = new_min_unallocated_id;
 
-                for new_id in (old_max + 1)..new_max {
+                for new_id in old_min_unallocated_id..self.min_unallocated_id {
                     all_ids.insert(new_id);
                     self.free_ids.insert(new_id);
                     free_id_alloc_chain.push_back(new_id);
                 }
-
-                all_ids.insert(new_max);
-                Ok(new_max)
+                
+                self.acquire_id()
             }
         }
     }
@@ -136,25 +147,29 @@ impl IdentifierRegistry<usize> for ExplicitIntegralIdentifierRegistry {
     }
 }
 
-/// Constructs an explicit integral registry of the given fixed size.
-pub fn make_explicit_id_registry(initial_size: usize) -> ExplicitIntegralIdentifierRegistry {
-    assert!(
-        initial_size > 0,
-        "Explicit Integral Identifier Registry expects a positive initial size."
-    );
-
-    let mut free_ids = LinkedList::new();
-    for i in 0..initial_size {
-        free_ids.push_back(i)
+impl ExplicitIntegralIdentifierRegistry {
+    
+    /// Build a registry with a non-zero initial size.
+    pub fn new(initial_size : usize) -> Self {
+        assert!(
+            initial_size > 0,
+            "Explicit Integral Identifier Registry expects a positive initial size."
+        );
+    
+        let mut free_ids = LinkedList::new();
+        for i in 0..initial_size {
+            free_ids.push_back(i)
+        }
+    
+        let all_ids_i = free_ids.clone().into_iter();
+        let free_ids_i = free_ids.clone().into_iter();
+    
+        ExplicitIntegralIdentifierRegistry {
+            all_ids: all_ids_i.collect(),
+            free_ids: free_ids_i.collect(),
+            free_id_alloc_chain: free_ids,
+            min_unallocated_id: initial_size,
+        }
     }
 
-    let all_ids_i = free_ids.clone().into_iter();
-    let free_ids_i = free_ids.clone().into_iter();
-
-    ExplicitIntegralIdentifierRegistry {
-        all_ids: all_ids_i.collect(),
-        free_ids: free_ids_i.collect(),
-        free_id_alloc_chain: free_ids,
-        max_used_id: initial_size - 1,
-    }
 }
