@@ -27,7 +27,6 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 #[cfg(test)]
 mod tests {
     use crate::utility::idregistry::*;
@@ -41,7 +40,6 @@ mod tests {
     fn idregistry_null_registry() {
         let _ = ExplicitIntegralIdentifierRegistry::null_registry();
     }
-
 
     #[test]
     #[should_panic(

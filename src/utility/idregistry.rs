@@ -113,7 +113,9 @@ impl IdentifierRegistry<usize> for ExplicitIntegralIdentifierRegistry {
                 let min_unallocated_id = self.min_unallocated_id;
 
                 let old_min_unallocated_id = min_unallocated_id;
-                let new_min_unallocated_id = min_unallocated_id + min(usize::MAX - min_unallocated_id, min_unallocated_id + 1) - 1;
+                let new_min_unallocated_id = min_unallocated_id
+                    + min(usize::MAX - min_unallocated_id, min_unallocated_id + 1)
+                    - 1;
 
                 if old_min_unallocated_id == new_min_unallocated_id {
                     return Err(IdentifierRegistryFailure::OutOfIdentifiers);
@@ -126,7 +128,7 @@ impl IdentifierRegistry<usize> for ExplicitIntegralIdentifierRegistry {
                     self.free_ids.insert(new_id);
                     free_id_alloc_chain.push_back(new_id);
                 }
-                
+
                 self.acquire_id()
             }
         }
@@ -148,22 +150,21 @@ impl IdentifierRegistry<usize> for ExplicitIntegralIdentifierRegistry {
 }
 
 impl ExplicitIntegralIdentifierRegistry {
-    
     /// Build a registry with a non-zero initial size.
-    pub fn new(initial_size : usize) -> Self {
+    pub fn new(initial_size: usize) -> Self {
         assert!(
             initial_size > 0,
             "Explicit Integral Identifier Registry expects a positive initial size."
         );
-    
+
         let mut free_ids = LinkedList::new();
         for i in 0..initial_size {
             free_ids.push_back(i)
         }
-    
+
         let all_ids_i = free_ids.clone().into_iter();
         let free_ids_i = free_ids.clone().into_iter();
-    
+
         ExplicitIntegralIdentifierRegistry {
             all_ids: all_ids_i.collect(),
             free_ids: free_ids_i.collect(),
@@ -171,5 +172,4 @@ impl ExplicitIntegralIdentifierRegistry {
             min_unallocated_id: initial_size,
         }
     }
-
 }
