@@ -29,6 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #[cfg(test)]
 mod tests {
+    use std::marker::PhantomData;
+
     use crate::{math::graph::*, utility::idregistry::ExplicitIntegralIdentifierRegistry};
 
     struct CountingGraphVisitor {
@@ -90,6 +92,100 @@ mod tests {
 
         assert_eq!(visitor.edge_count, 0);
         assert_eq!(visitor.vertex_count, 1);
+    }
+
+    #[test]
+    fn graph_nontrivial_bfs() {
+        #[derive(Clone, PartialEq)]
+        enum VertexTag {
+            V1,
+            V2,
+            V3,
+            V4,
+            V5,
+        }
+
+        let mut g: Graph<usize, VertexTag, PhantomData<f32>, _> = Graph::new(
+            ExplicitIntegralIdentifierRegistry::new(6),
+            ExplicitIntegralIdentifierRegistry::new(12),
+        );
+
+        let v1 = mutators::add_vertex(&mut g, VertexTag::V1);
+        let v2 = mutators::add_vertex(&mut g, VertexTag::V2);
+        let v3 = mutators::add_vertex(&mut g, VertexTag::V3);
+        let v4 = mutators::add_vertex(&mut g, VertexTag::V4);
+        let v5 = mutators::add_vertex(&mut g, VertexTag::V5);
+
+        mutators::add_edge(&mut g, v1, v2, PhantomData);
+        mutators::add_edge(&mut g, v1, v3, PhantomData);
+        mutators::add_edge(&mut g, v1, v4, PhantomData);
+
+        mutators::add_edge(&mut g, v3, v2, PhantomData);
+        mutators::add_edge(&mut g, v3, v5, PhantomData);
+        mutators::add_edge(&mut g, v3, v4, PhantomData);
+
+        mutators::add_edge(&mut g, v4, v5, PhantomData);
+        mutators::add_edge(&mut g, v4, v1, PhantomData);
+
+        mutators::add_edge(&mut g, v2, v5, PhantomData);
+
+        mutators::add_edge(&mut g, v5, v2, PhantomData);
+
+        // BFS from V1 should result in the entire vertex set.
+        {
+            let mut vertex_collector = VertexCollector::new(|_| true);
+            breadth_first_traversal(&g, v1, &mut vertex_collector);
+            let g_bfs: LinkedList<usize> = vertex_collector
+                .vertices()
+                .iter()
+                .map(|vdesc| vdesc.id().clone())
+                .collect();
+            assert_eq!(g_bfs, LinkedList::from([v1, v2, v3, v4, v5]))
+        }
+        {
+            // BFS from V2 and V5 are just the two element set containing V2 and V5.
+            let mut vertex_collector = VertexCollector::new(|_| true);
+            breadth_first_traversal(&g, v2, &mut vertex_collector);
+            let g_bfs: LinkedList<usize> = vertex_collector
+                .vertices()
+                .iter()
+                .map(|vdesc| vdesc.id().clone())
+                .collect();
+            assert_eq!(g_bfs, LinkedList::from([v2, v5]));
+        }
+        {
+            // BFS from V2 and V5 are just the two element set containing V2 and V5.
+            let mut vertex_collector = VertexCollector::new(|_| true);
+            breadth_first_traversal(&g, v5, &mut vertex_collector);
+            let g_bfs: LinkedList<usize> = vertex_collector
+                .vertices()
+                .iter()
+                .map(|vdesc| vdesc.id().clone())
+                .collect();
+            assert_eq!(g_bfs, LinkedList::from([v5, v2]));
+        }
+        {
+            // BFS from V3 is the entire set.
+            let mut vertex_collector = VertexCollector::new(|_| true);
+            breadth_first_traversal(&g, v3, &mut vertex_collector);
+            let g_bfs: LinkedList<usize> = vertex_collector
+                .vertices()
+                .iter()
+                .map(|vdesc| vdesc.id().clone())
+                .collect();
+            assert_eq!(g_bfs, LinkedList::from([v3, v2, v5, v4, v1]))
+        }
+        {
+            // BFS from V4 is the entire set.
+            let mut vertex_collector = VertexCollector::new(|_| true);
+            breadth_first_traversal(&g, v4, &mut vertex_collector);
+            let g_bfs: LinkedList<usize> = vertex_collector
+                .vertices()
+                .iter()
+                .map(|vdesc| vdesc.id().clone())
+                .collect();
+            assert_eq!(g_bfs, LinkedList::from([v4, v5, v1, v2, v3]))
+        }
     }
 
     impl<'a> GraphVisitor<'a, usize, f32, f32> for CountingGraphVisitor {

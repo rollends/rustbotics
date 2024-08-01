@@ -251,6 +251,11 @@ impl<
     }
 }
 
+
+/// Vertex Collector.
+/// 
+/// Collects vertices into a linked list as they are visited, in-order, by 
+/// reference.
 pub struct VertexCollector<
     'a,
     Id: Copy + Eq + Hash + Display,
@@ -264,22 +269,15 @@ pub struct VertexCollector<
 impl<'a, Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq, F: Fn(&Data) -> bool>
     VertexCollector<'a, Id, Data, F>
 {
+    pub fn new(selector: F) -> Self {
+        VertexCollector {
+            vertices: LinkedList::new(),
+            selector: selector,
+        }
+    }
+
     pub fn vertices(&self) -> &LinkedList<&'a VertexDescriptor<Id, Data>> {
         &self.vertices
-    }
-}
-
-pub fn make_vertex_collector<
-    'a,
-    Id: Copy + Eq + Hash + Display,
-    Data: Clone + PartialEq,
-    F: Fn(&Data) -> bool,
->(
-    selector: F,
-) -> VertexCollector<'a, Id, Data, F> {
-    VertexCollector {
-        vertices: LinkedList::new(),
-        selector: selector,
     }
 }
 
@@ -307,6 +305,12 @@ impl<
 pub mod mutators;
 mod tests;
 
+/// Breadth-First Traversal.
+///
+/// Performs a breadth-first traversal (BFT) on the graph from the given vertex
+/// and applies the provided visitor to every edge and vertex it visits in
+/// order. Due to how BFT is performed, the traversal of an edge happens just
+/// before the out vertex it corresponds to is visited.
 pub fn breadth_first_traversal<
     'a,
     Id: Copy + Eq + Hash + Display,

@@ -148,6 +148,11 @@ impl<
     }
 }
 
+
+/// Adds a vertex into the graph.
+/// 
+/// Mutates the given graph (in-place) by adding a new vertex with the given
+/// data and returns the id associated with the new vertex.
 pub fn add_vertex<
     Id: Copy + Eq + Hash + Display,
     Data: Clone + PartialEq,
@@ -172,6 +177,11 @@ pub fn add_vertex<
         .expect("Failed to insert vertex in graph for an unknown reason.")
 }
 
+/// Adds a edge into the graph.
+/// 
+/// Mutates the given graph (in-place) by adding a new edge between the two
+/// vertices (of the given ids) and with the given data. The method returns the
+/// id associated with the new edge.
 pub fn add_edge<
     Id: Copy + Eq + Hash + Display,
     Data: Clone + PartialEq,
