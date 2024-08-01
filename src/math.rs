@@ -30,3 +30,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 pub mod algebra;
 pub mod arrayalgebra;
 mod test_algebra;
+
+pub mod graph;
