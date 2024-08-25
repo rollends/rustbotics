@@ -28,4 +28,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 pub mod math;
+pub mod robotics;
 pub mod utility;

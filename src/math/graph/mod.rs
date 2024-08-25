@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //! Provides traits and implementations supporting basic Graph representation
 //! and operations, such as graph mutation and path finding.
 
-use crate::utility::idregistry::IdentifierRegistry;
+use crate::utility::idregistry::{Identifier, IdentifierRegistry};
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet, LinkedList, VecDeque};
 use std::fmt::Display;
@@ -49,12 +49,7 @@ use elements::*;
 /// registry mapping the vertices and edges to their identifiers; this allows
 /// users to store the data associated with their vertices and edges in the
 /// graph while primarily working with the (hopefully lightweight) identifiers.
-pub struct Graph<
-    Id: Copy + Eq + Hash + Display,
-    Data: Clone + PartialEq,
-    WeightData: Clone + PartialEq,
-    Registry: IdentifierRegistry<Id>,
-> {
+pub struct Graph<Id: Identifier, Data: Clone, WeightData: Clone, Registry: IdentifierRegistry<Id>> {
     vertex_id_registry: Registry,
     edge_id_registry: Registry,
     vertices: HashMap<Id, VertexDescriptor<Id, Data>>,
@@ -69,9 +64,9 @@ pub struct Graph<
 /// to produce a new graph. The old graph is consumed, and, ideally, done so
 /// in a way that minimizes (or eliminates) cloning.
 pub trait GraphMutator<
-    Id: Copy + Eq + Hash + Display,
-    Data: Clone + PartialEq,
-    WeightData: Clone + PartialEq,
+    Id: Identifier,
+    Data: Clone,
+    WeightData: Clone,
     Registry: IdentifierRegistry<Id>,
 >
 {
@@ -85,12 +80,7 @@ pub trait GraphMutator<
 ///
 /// Stores a list of vertices (and transiting edges) that move from one vertex
 /// to another in a graph.
-pub struct Walk<
-    'a,
-    Id: Copy + Eq + Hash + Display,
-    Data: Clone + PartialEq,
-    WeightData: Clone + PartialEq,
-> {
+pub struct Walk<'a, Id: Copy + Eq + Hash + Display, Data: Clone, WeightData: Clone> {
     vertices: LinkedList<&'a VertexDescriptor<Id, Data>>,
     edges: LinkedList<&'a EdgeDescriptor<Id, WeightData>>,
 }
@@ -102,8 +92,8 @@ pub struct Walk<
 pub trait GraphVisitor<'a, Id, Data, WeightData>
 where
     Id: Copy + Eq + Hash + Display,
-    Data: Clone + PartialEq,
-    WeightData: Clone + PartialEq,
+    Data: Clone,
+    WeightData: Clone,
 {
     fn reset(&mut self);
     fn visit_vertex(&mut self, vertex: &'a VertexDescriptor<Id, Data>);
@@ -115,12 +105,8 @@ where
     );
 }
 
-impl<
-        Id: Copy + Eq + Hash + Display,
-        Registry: IdentifierRegistry<Id>,
-        Data: Clone + PartialEq,
-        WeightData: Clone + PartialEq,
-    > Graph<Id, Data, WeightData, Registry>
+impl<Id: Identifier, Registry: IdentifierRegistry<Id>, Data: Clone, WeightData: Clone>
+    Graph<Id, Data, WeightData, Registry>
 {
     /// Creates a new (empty) graph with the given registries.
     pub fn new(
@@ -135,6 +121,43 @@ impl<
             forward_edges: HashMap::new(),
             backward_edges: HashMap::new(),
         }
+    }
+
+    /// Get a vertex descriptor by its identifier. Assumes vertex exists, and
+    /// panics otherwise.
+    pub fn get_vertex<'a>(&'a self, vertex_id: Id) -> &'a VertexDescriptor<Id, Data> {
+        self.vertices
+            .get(&vertex_id)
+            .expect(format!("Graph does not have the vertex with id {}", vertex_id).as_str())
+    }
+
+    
+    /// Get an edge descriptor by its identifier. Assumes edge exists, and
+    /// panics otherwise.
+    pub fn get_edge<'a>(&'a self, edge_id: Id) -> &'a EdgeDescriptor<Id, WeightData> {
+        self.edges
+            .get(&edge_id)
+            .expect(format!("Graph does not have the edge with id {}", edge_id).as_str())
+    }
+
+    /// Get an edge descriptor by the vertex it comes from to the vertex it 
+    /// targets. Assumes edge exists and panics otherwise.
+    pub fn get_edge_between<'a>(
+        &'a self,
+        vertex_from: Id,
+        vertex_to: Id,
+    ) -> &'a EdgeDescriptor<Id, WeightData> {
+        self.out_neighbours_of(vertex_from)
+            .iter()
+            .find(|&(_, vid_to)| *vid_to.id() == vertex_to)
+            .map(|&(a, b)| a)
+            .expect(
+                format!(
+                    "Graph does not have the edge from vertex {} to vertex {}",
+                    vertex_from, vertex_to
+                )
+                .as_str(),
+            )
     }
 
     /// Returns a list of edges and vertices that are (out) neighbours of the
@@ -159,6 +182,8 @@ impl<
             .is_some()
     }
 
+    /// Returns a list of the out-neighbours of a vertex with the corresponding
+    /// edges.
     pub fn out_neighbours_of<'a>(
         &'a self,
         vertex_id: Id,
@@ -193,6 +218,8 @@ impl<
             .collect()
     }
 
+    /// Returns a list of the in-neighbours of a vertex with the corresponding
+    /// edges.
     pub fn in_neighbours_of<'a>(
         &'a self,
         vertex_id: Id,
@@ -240,21 +267,22 @@ impl<
         }
     }
 
-    pub fn select_vertices_with_data<'a>(
+    /// Returns a list of vertices in the graph that satisfy the given 
+    /// predicate.
+    pub fn select_vertices<'a, F: Fn(&'a Data) -> bool>(
         &'a self,
-        desc: Data,
+        predicate: F,
     ) -> LinkedList<&'a VertexDescriptor<Id, Data>> {
         self.vertices
             .values()
-            .filter(|other_desc| desc == *other_desc.data())
+            .filter(|other_desc| predicate(other_desc.data()))
             .collect()
     }
 }
 
-
 /// Vertex Collector.
-/// 
-/// Collects vertices into a linked list as they are visited, in-order, by 
+///
+/// Collects vertices into a linked list as they are visited, in-order, by
 /// reference.
 pub struct VertexCollector<
     'a,
@@ -313,7 +341,7 @@ mod tests;
 /// before the out vertex it corresponds to is visited.
 pub fn breadth_first_traversal<
     'a,
-    Id: Copy + Eq + Hash + Display,
+    Id: Identifier,
     Registry: IdentifierRegistry<Id>,
     Data: Clone + PartialEq,
     WeightData: Clone + PartialEq,
