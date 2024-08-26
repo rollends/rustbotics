@@ -31,6 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 mod tests {
     use std::marker::PhantomData;
 
+    use pathfinding::find_path;
+    use traversal::breadth_first_traversal;
+
     use crate::{math::graph::*, utility::idregistry::ExplicitIntegralIdentifierRegistry};
 
     struct CountingGraphVisitor {
@@ -188,6 +191,90 @@ mod tests {
         }
     }
 
+    #[test]
+    fn graph_path_finding_when_path_exists() {
+        use std::iter::zip;
+
+        #[derive(Clone, PartialEq)]
+        enum VertexTag {
+            V1,
+            V2,
+            V3,
+            V4,
+            V5,
+        }
+
+        let mut g: Graph<usize, VertexTag, PhantomData<f32>, _> = Graph::new(
+            ExplicitIntegralIdentifierRegistry::new(6),
+            ExplicitIntegralIdentifierRegistry::new(12),
+        );
+
+        let v1 = mutators::add_vertex(&mut g, VertexTag::V1);
+        let v2 = mutators::add_vertex(&mut g, VertexTag::V2);
+        let v3 = mutators::add_vertex(&mut g, VertexTag::V3);
+        let v4 = mutators::add_vertex(&mut g, VertexTag::V4);
+        let v5 = mutators::add_vertex(&mut g, VertexTag::V5);
+
+        let e1 = mutators::add_edge(&mut g, v1, v2, PhantomData);
+
+        let e2 = mutators::add_edge(&mut g, v2, v3, PhantomData);
+
+        let _ = mutators::add_edge(&mut g, v3, v1, PhantomData);
+        let e4 = mutators::add_edge(&mut g, v3, v4, PhantomData);
+
+        let e5 = mutators::add_edge(&mut g, v4, v5, PhantomData);
+        let _ = mutators::add_edge(&mut g, v5, v4, PhantomData);
+
+        // Path from v1 to v5 exists, and is v1, v2, v3, v4, v5 in that order.
+        let expected_vertices = LinkedList::from([v1, v2, v3, v4, v5]);
+        let expected_edges = LinkedList::from([e1, e2, e4, e5]);
+        let path = find_path(&g, v1, v5).expect("Path was expected but none was found.");
+
+        for (vertex_actual, vertex_expected) in zip(path.vertices, expected_vertices) {
+            assert_eq!(*vertex_actual.id(), vertex_expected);
+        }
+        for (edge_actual, edge_expected) in zip(path.edges, expected_edges) {
+            assert_eq!(*edge_actual.id(), edge_expected);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "Path was expected but none was found.")]
+    fn graph_path_finding_when_path_doesnt_exist() {
+        #[derive(Clone, PartialEq)]
+        enum VertexTag {
+            V1,
+            V2,
+            V3,
+            V4,
+            V5,
+        }
+
+        let mut g: Graph<usize, VertexTag, PhantomData<f32>, _> = Graph::new(
+            ExplicitIntegralIdentifierRegistry::new(6),
+            ExplicitIntegralIdentifierRegistry::new(12),
+        );
+
+        let v1 = mutators::add_vertex(&mut g, VertexTag::V1);
+        let v2 = mutators::add_vertex(&mut g, VertexTag::V2);
+        let v3 = mutators::add_vertex(&mut g, VertexTag::V3);
+        let v4 = mutators::add_vertex(&mut g, VertexTag::V4);
+        let v5 = mutators::add_vertex(&mut g, VertexTag::V5);
+
+        mutators::add_edge(&mut g, v1, v2, PhantomData);
+
+        mutators::add_edge(&mut g, v2, v3, PhantomData);
+
+        mutators::add_edge(&mut g, v3, v1, PhantomData);
+        mutators::add_edge(&mut g, v3, v4, PhantomData);
+
+        mutators::add_edge(&mut g, v4, v5, PhantomData);
+        mutators::add_edge(&mut g, v5, v4, PhantomData);
+
+        // Path from v5 to v1 does not exist
+        find_path(&g, v5, v1).expect("Path was expected but none was found.");
+    }
+
     impl<'a> GraphVisitor<'a, usize, f32, f32> for CountingGraphVisitor {
         fn reset(&mut self) {
             self.vertex_count = 0;
@@ -200,6 +287,10 @@ mod tests {
 
         fn visit_edge(&mut self, _: usize, _: &'a EdgeDescriptor<usize, f32>, _: usize) {
             self.edge_count += 1;
+        }
+
+        fn should_terminate(&self) -> bool {
+            false
         }
     }
 }
