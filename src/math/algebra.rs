@@ -68,7 +68,6 @@ pub trait Vector<Field>:
     + Mul<Field, Output = Self>
     + PartialEq
     + Clone
-    + Copy
 where
     Field: Scalar,
 {

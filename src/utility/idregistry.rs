@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 use std::borrow::BorrowMut;
 use std::cmp::min;
 use std::collections::{HashSet, LinkedList};
+use std::fmt::Display;
 
 /// Identifier Registry Failures.
 #[derive(Debug)]
@@ -51,6 +52,8 @@ pub enum IdentifierRegistryFailure {
     IdentiferAlreadyReleased,
 }
 
+pub trait Identifier: Clone + Copy + Eq + Display + core::hash::Hash {}
+
 /// Identifier Registry Trait.
 ///
 /// Identifier registries support acquisition and release operation for unique
@@ -58,7 +61,7 @@ pub enum IdentifierRegistryFailure {
 /// of acquire_id returns y unless it follows a call to release_id(y). Thus, the
 /// user of this trait can use the output of acquire_id as a unique identifier
 /// to compare other objects identifed by the same registry.
-pub trait IdentifierRegistry<Identifier: Clone + Eq>: Clone {
+pub trait IdentifierRegistry<ID: Identifier>: Clone {
     type Identifier;
 
     /// Builds an empty registry.
@@ -67,12 +70,12 @@ pub trait IdentifierRegistry<Identifier: Clone + Eq>: Clone {
     /// Retrieves a currently unused identifier, removing it from the registry,
     /// or fails. Failure can occur only if the registry runs out of
     /// unique identifiers.
-    fn acquire_id(&mut self) -> Result<Identifier, IdentifierRegistryFailure>;
+    fn acquire_id(&mut self) -> Result<ID, IdentifierRegistryFailure>;
 
     /// Returns the provided identifier to the registry so that it can be
     /// reused, or fails. Failure can occur if the provided identifier was not
     /// expected to be in use, or if the identifier was otherwise invalid.
-    fn release_id(&mut self, id: Identifier) -> Result<(), IdentifierRegistryFailure>;
+    fn release_id(&mut self, id: ID) -> Result<(), IdentifierRegistryFailure>;
 }
 
 /// Explicit, Integral Identifier Registry.
@@ -85,6 +88,8 @@ pub struct ExplicitIntegralIdentifierRegistry {
     free_id_alloc_chain: LinkedList<usize>,
     min_unallocated_id: usize,
 }
+
+impl Identifier for usize {}
 
 impl IdentifierRegistry<usize> for ExplicitIntegralIdentifierRegistry {
     type Identifier = usize;

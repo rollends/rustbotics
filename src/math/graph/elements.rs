@@ -31,12 +31,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //!
 //!
 use core::hash::Hash;
-use std::fmt::Display;
+
+use crate::utility::idregistry::Identifier;
 
 /// Pairs the (unique) vertex identifier with a (non-unique) vertex datum, fully
 /// describing a vertex in a graph.
 #[derive(Clone, PartialEq)]
-pub struct VertexDescriptor<Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq> {
+pub struct VertexDescriptor<Id: Identifier, Data: Clone> {
     id: Id,
     data: Data,
 }
@@ -44,7 +45,7 @@ pub struct VertexDescriptor<Id: Copy + Eq + Hash + Display, Data: Clone + Partia
 /// Pairs the (unique) edge identifier with a (non-unique) edge datum, fully
 /// describing an edge in a graph.
 #[derive(Clone, PartialEq)]
-pub struct EdgeDescriptor<Id: Copy + Eq + Hash + Display, WeightData: Clone + PartialEq> {
+pub struct EdgeDescriptor<Id: Identifier, WeightData: Clone> {
     id: Id,
     data: WeightData,
 }
@@ -53,7 +54,7 @@ pub struct EdgeDescriptor<Id: Copy + Eq + Hash + Display, WeightData: Clone + Pa
 ///
 /// Uniquely identifiably element of a graph with some category that is tied
 /// with metadata.
-pub trait GraphElement<IdType: Copy + PartialEq + Hash + Display, Data: Clone + PartialEq> {
+pub trait GraphElement<IdType: Identifier, Data: Clone> {
     /// Unique identifier amongst a specific category of graph elements.
     fn id(&self) -> &IdType;
 
@@ -62,23 +63,24 @@ pub trait GraphElement<IdType: Copy + PartialEq + Hash + Display, Data: Clone + 
 
     /// Return a copy of the element with new data.
     fn with_data(&self, new_data: Data) -> Self;
+
+    /// Map data in element to produce a new element with the mapped data.
+    fn map<F: FnOnce(Data) -> Data>(self, op: F) -> Self;
 }
 
-impl<Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq> Hash for VertexDescriptor<Id, Data> {
+impl<Id: Identifier, Data: Clone> Hash for VertexDescriptor<Id, Data> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id().hash(state)
     }
 }
 
-impl<Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq> Hash for EdgeDescriptor<Id, Data> {
+impl<Id: Identifier, Data: Clone> Hash for EdgeDescriptor<Id, Data> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id().hash(state)
     }
 }
 
-impl<Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq> GraphElement<Id, Data>
-    for VertexDescriptor<Id, Data>
-{
+impl<Id: Identifier, Data: Clone> GraphElement<Id, Data> for VertexDescriptor<Id, Data> {
     fn id(&self) -> &Id {
         &self.id
     }
@@ -93,11 +95,16 @@ impl<Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq> GraphElement<Id, D
             data: new_data,
         }
     }
+
+    fn map<F: FnOnce(Data) -> Data>(self, op: F) -> Self {
+        VertexDescriptor {
+            id: self.id,
+            data: op(self.data),
+        }
+    }
 }
 
-impl<Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq> GraphElement<Id, Data>
-    for EdgeDescriptor<Id, Data>
-{
+impl<Id: Identifier, Data: Clone> GraphElement<Id, Data> for EdgeDescriptor<Id, Data> {
     fn id(&self) -> &Id {
         &self.id
     }
@@ -112,18 +119,19 @@ impl<Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq> GraphElement<Id, D
             data: new_data,
         }
     }
+
+    fn map<F: FnOnce(Data) -> Data>(self, op: F) -> Self {
+        EdgeDescriptor {
+            id: self.id,
+            data: op(self.data),
+        }
+    }
 }
 
-pub fn make_edge<Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq>(
-    id: Id,
-    data: Data,
-) -> EdgeDescriptor<Id, Data> {
+pub fn make_edge<Id: Identifier, Data: Clone>(id: Id, data: Data) -> EdgeDescriptor<Id, Data> {
     EdgeDescriptor { id: id, data: data }
 }
 
-pub fn make_vertex<Id: Copy + Eq + Hash + Display, Data: Clone + PartialEq>(
-    id: Id,
-    data: Data,
-) -> VertexDescriptor<Id, Data> {
+pub fn make_vertex<Id: Identifier, Data: Clone>(id: Id, data: Data) -> VertexDescriptor<Id, Data> {
     VertexDescriptor { id: id, data: data }
 }
